@@ -24,20 +24,32 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
 
-    - name: Build Client APK
-      run: gradle :client:assembleDebug
+    - name: Find Gradle Project
+      run: |
+        echo "Searching..."
+        find . -name settings.gradle -o -name settings.gradle.kts
 
-    - name: Build Admin APK
-      run: gradle :admin:assembleDebug
+    - name: Build Client
+      run: |
+        ROOT=$(dirname $(find . -name settings.gradle | head -1))
+        echo "Gradle root: $ROOT"
+        cd "$ROOT"
+        gradle :client:assembleDebug
+
+    - name: Build Admin
+      run: |
+        ROOT=$(dirname $(find . -name settings.gradle | head -1))
+        cd "$ROOT"
+        gradle :admin:assembleDebug
 
     - name: Upload Client APK
       uses: actions/upload-artifact@v4
       with:
-        name: client-apk
-        path: client/build/outputs/apk/debug/*.apk
+        name: Client-APK
+        path: "**/client/build/outputs/apk/debug/*.apk"
 
     - name: Upload Admin APK
       uses: actions/upload-artifact@v4
       with:
-        name: admin-apk
-        path: admin/build/outputs/apk/debug/*.apk
+        name: Admin-APK
+        path: "**/admin/build/outputs/apk/debug/*.apk"

@@ -12,44 +12,69 @@ jobs:
 
     steps:
 
-    - name: Checkout
+    - name: Checkout Repository
       uses: actions/checkout@v4
 
-    - name: Setup Java
+
+    - name: Setup Java 17
       uses: actions/setup-java@v4
       with:
         distribution: temurin
         java-version: 17
 
+
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
 
-    - name: Find Gradle Project
-      run: |
-        echo "Searching..."
-        find . -name settings.gradle -o -name settings.gradle.kts
 
-    - name: Build Client
+    - name: Check Repository Files
       run: |
-        ROOT=$(dirname $(find . -name settings.gradle | head -1))
-        echo "Gradle root: $ROOT"
-        cd "$ROOT"
+        echo "Current folder:"
+        pwd
+        echo "Files:"
+        ls -la
+        echo "Searching Gradle files:"
+        find . -name settings.gradle -o -name settings.gradle.kts -o -name build.gradle
+
+
+    - name: Find Gradle Root
+      id: gradle_root
+      run: |
+        ROOT=$(find . -name settings.gradle -o -name settings.gradle.kts | head -1)
+
+        if [ -z "$ROOT" ]; then
+          echo "Gradle project not found!"
+          exit 1
+        fi
+
+        ROOT_DIR=$(dirname "$ROOT")
+        echo "Gradle root found: $ROOT_DIR"
+        echo "root=$ROOT_DIR" >> $GITHUB_OUTPUT
+
+
+    - name: Build Client APK
+      run: |
+        cd "${{ steps.gradle_root.outputs.root }}"
         gradle :client:assembleDebug
 
-    - name: Build Admin
+
+    - name: Build Admin APK
       run: |
-        ROOT=$(dirname $(find . -name settings.gradle | head -1))
-        cd "$ROOT"
+        cd "${{ steps.gradle_root.outputs.root }}"
         gradle :admin:assembleDebug
+
 
     - name: Upload Client APK
       uses: actions/upload-artifact@v4
       with:
         name: Client-APK
-        path: "**/client/build/outputs/apk/debug/*.apk"
+        path: |
+          **/client/build/outputs/apk/debug/*.apk
+
 
     - name: Upload Admin APK
       uses: actions/upload-artifact@v4
       with:
         name: Admin-APK
-        path: "**/admin/build/outputs/apk/debug/*.apk"
+        path: |
+          **/admin/build/outputs/apk/debug/*.apk
